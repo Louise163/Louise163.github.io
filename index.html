@@ -24,21 +24,36 @@
 	</head>
 
 	<body>
-		<script src="canvas.js"></script>
+		<!-- <script type="module" src="canvas.js"></script> -->
 		<script type="module">
 
-			import * as THREE from '../js/three.module.js';
+			import * as THREE from './js/three.module.js';
 
 			import Stats from './js/stats.module.js';
 			import { GUI } from './js/dat.gui.module.js';
 			import { OrbitControls } from './js/OrbitControls.js';
 			import { GLTFLoader } from './js/GLTFLoader.js';
+			import {startDraw, 
+					endDraw, 
+					draw, 
+					generateDrawing, 
+					stopDrawing,
+					controlParameter
+				} from './canvas.js';
 
 			var container, stats, clock, gui, mixer, actions, activeAction, previousAction;
 			var camera, scene, renderer, model, face;
 			var controls;
+			var movements = [];
+			var params = {
+
+				draw: true,
+				play: false,
+				
+				}
 			var api = { state: 'Walking' };
 			var frameNumber = 0;
+			var mouse = new THREE.Vector2();
 			init();
 			animate();
 
@@ -124,17 +139,22 @@
 				renderer.outputEncoding = THREE.sRGBEncoding;
 				container.appendChild( renderer.domElement );
 
+				generateDrawing(scene, camera);
+
 				window.addEventListener( 'resize', onWindowResize, false );
+
 
 				// stats
 				stats = new Stats();
 				container.appendChild( stats.dom );
 
-				// control
-				
-				// controls = new OrbitControls( camera, renderer.domElement );
+				// controls
+				controls = new OrbitControls( camera, renderer.domElement );
 				// controls.target.set( 0, 0, 0 );
-				// controls.update();
+				controls.target.set(0, 2, 5);
+				controls.update();
+				controls.enabled = false;
+
 
 			}
 
@@ -148,9 +168,10 @@
 				mixer = new THREE.AnimationMixer( model );
 
 				actions = {};
+				console.info(animations);
 
-				for ( var i = 0; i < animations.length; i ++ ) {
-
+				for ( let i = 0; i < animations.length; i ++ ) {
+					
 					var clip = animations[ i ];
 					var action = mixer.clipAction( clip );
 					actions[ clip.name ] = action;
@@ -178,44 +199,68 @@
 
 				statesFolder.open();
 
-				// emotes
+				// // emotes
 
-				var emoteFolder = gui.addFolder( 'Emotes' );
+				// var emoteFolder = gui.addFolder( 'Emotes' );
 
-				function createEmoteCallback( name ) {
+				// function createEmoteCallback( name ) {
 
-					api[ name ] = function () {
+				// 	api[ name ] = function () {
 
-						fadeToAction( name, 0.2 );
+				// 		fadeToAction( name, 0.2 );
 
-						mixer.addEventListener( 'finished', restoreState );
+				// 		mixer.addEventListener( 'finished', restoreState );
 
-					};
+				// 	};
 
-					emoteFolder.add( api, name );
+				// 	emoteFolder.add( api, name );
 
-				}
+				// }
 
-				function restoreState() {
+				// function restoreState() {
 
-					mixer.removeEventListener( 'finished', restoreState );
+				// 	mixer.removeEventListener( 'finished', restoreState );
 
-					fadeToAction( api.state, 0.2 );
+				// 	fadeToAction( api.state, 0.2 );
 
-				}
+				// }
 
-				for ( var i = 0; i < emotes.length; i ++ ) {
+				// for ( var i = 0; i < emotes.length; i ++ ) {
 
-					createEmoteCallback( emotes[ i ] );
+				// 	createEmoteCallback( emotes[ i ] );
 
-				}
+				// }
 
-				emoteFolder.open();
-
+				// emoteFolder.open();
+				// Controls
+				var controlFolder = gui.addFolder( 'Control');
+				controlFolder.add( params, 'draw').onChange( function () { isDraw(params)});
+				controlFolder.add( params, 'play');
+				controlFolder.open();
 
 
 				activeAction = actions[ 'Walking' ];
 				activeAction.play();
+
+			}
+			function isDraw(params) {
+				// console.info("hello");
+				if (params.draw) {
+					// console.info("hellohello")
+					generateDrawing(scene, camera);
+					console.info("controls", controls);
+					if (controls.enabled) controls.enabled = false;
+				} 				
+				else {
+					// console.info("hellohellohello")
+					stopDrawing();
+					movements = controlParameter();
+					console.info(movements);
+					// control
+					controls.enabled = true;
+					
+
+				} 
 
 			}
 
@@ -251,28 +296,57 @@
 			//
 
 			function animate() {
+				if (params.play) {
+					var dt = clock.getDelta();
 
-				var dt = clock.getDelta();
+					if ( mixer ) mixer.update( dt );
+					
 
-				if ( mixer ) mixer.update( dt );
+					
+					// var object = scene.model;
+					// console.log(scene);
+					// console.log(mixer);
+					update(model);
+
 				
-
+				}
 				requestAnimationFrame( animate );
-				// var object = scene.model;
-				// console.log(scene);
-				// console.log(mixer);
-				update(model);
-
+				// console.info(scene);
 				renderer.render( scene, camera );
 
-				stats.update();
+				stats.update();	
+
 
 			}
+			function similar(a, b) {
+				if (a >= b - 1 && a <= b - 0.93) {
+					return true;
+				}
+				else return false;
+			}
 			function update(model) {
+				let isMoving = true;
+				for (let i = 0; i < movements.length; i++) {
+					console.info("updating...")
+					if (similar(model.position.z, movements[i].z)) {
+						console.info(model.position.z, movements[i].z);
+						console.info('Death', i);
+						fadeToAction('Death', 0.5);
+						// model.position.y += 7;
+						// console.info(model.position.y, "00");
+						fadeToAction('Walking', 3);
+						// model.position.y -= 7;
+						// console.info(model.position.y, "01");
+						//jump
+
+					}
+				}
+				
 				model.position.z += 0.07;
 				// model.rotation.y += 0.001;
 				// model.translateZ(0.05);
 			}
+
 
 		</script>
 
