@@ -160,8 +160,8 @@
 
 			function createGUI( model, animations ) {
 
-				var states = [ 'Idle', 'Walking', 'Running', 'Dance', 'Death', 'Sitting', 'Standing' ];
-				var emotes = [ 'Jump', 'Yes', 'No', 'Wave', 'Punch', 'ThumbsUp' ];
+				var states = [ 'Idle', 'Walking', 'Running', 'Dance', 'Sitting', 'Standing' ];
+				var emotes = [ 'Jump', 'Yes', 'No', 'Wave', 'Punch', 'ThumbsUp', 'Death' ];
 
 				gui = new GUI();
 
@@ -319,30 +319,65 @@
 
 			}
 			function similar(a, b) {
-				if (a >= b - 1 && a <= b - 0.93) {
+				if (a >= b - 1 && a < b - 0.93) {
 					return true;
 				}
 				else return false;
 			}
+			var counting = 0;
+			var addCount = false;
+			var currentMoveInd = 0;
 			function update(model) {
-				let isMoving = true;
-				for (let i = 0; i < movements.length; i++) {
-					console.info("updating...")
-					if (similar(model.position.z, movements[i].z)) {
-						console.info(model.position.z, movements[i].z);
-						console.info('Death', i);
-						fadeToAction('Death', 0.5);
-						// model.position.y += 7;
-						// console.info(model.position.y, "00");
-						fadeToAction('Walking', 3);
-						// model.position.y -= 7;
-						// console.info(model.position.y, "01");
-						//jump
-
-					}
-				}
 				
-				model.position.z += 0.07;
+
+			if (currentMoveInd < movements.length && similar(model.position.z, movements[currentMoveInd].z)) {
+				addCount = true;
+				console.info("counting....", counting++)
+				
+				console.info(model.position.z, movements[currentMoveInd].z);
+				console.info(activeAction);
+				// console.info('Death', i);
+				fadeToAction('Death', 1);
+				// fadeToAction('Death', 1);
+				console.info(activeAction);
+				// while (addCount) {
+				// 	counting ++;
+				// 	if (counting >= 20000) addCount = false;
+				// }
+
+				
+				// model.position.y += 7;
+				// console.info(model.position.y, "00");
+
+				// isMoving = false;
+				// model.position.y -= 7;
+				// console.info(model.position.y, "01");
+				//jump
+				currentMoveInd ++;
+				
+			}
+			else if (counting >= 200) {
+				fadeToAction('Walking', 1);
+				console.info(activeAction);
+				counting = 0;
+				addCount = false;
+			}
+			else {
+				counting++;
+			}
+					
+					// else  {
+					// 	isMoving = true;
+					// }
+				// }
+				// if (addCount) counting++;
+				// if (!addCount || (addCount && counting >= 200)) {
+					
+				// 	addCount = false;
+				// 	counting = 0;
+				// } 
+			if (!addCount) model.position.z += 0.07;
+				// else model.position.z += 0.00001;
 				// model.rotation.y += 0.001;
 				// model.translateZ(0.05);
 			}
