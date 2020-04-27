@@ -140,18 +140,19 @@ function vertical(points, i) {
         if (points[idx].z > avg + 0.03 || points[idx].z < avg - 0.03) flag = false;
         if (!flag) break;
     }
+    if (Math.abs(gradient(points[i+3], points[i])) < 2) flag = false;
     console.info("vertical?", i, flag, "avg:", avg);
     return flag;
 }
 export function controlMovement() {
     var movementPoints = [[], [], [], []];
-    pointPoperty = pos2vec2acc(points);
+    var pointPoperty = pos2vec2acc(points);
     for (let i = 3; i < points.length - 3; i += 3) {
-        console.log("grad", gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
+        console.log("grad", i, gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
         // console.info(points[i]);
         if ((gradient(points[i], points[i-3])) > 1 && (gradient(points[i+3], points[i])) < -1) {
             // death points
-            console.log("death grad", gradient(points[i], points[i-3]), gradient(points[i+5], points[i]));
+            console.log("death grad", gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
             movementPoints[0].push(points[i]);
             
         }
@@ -160,13 +161,13 @@ export function controlMovement() {
             console.log("jump grad", i, gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
             movementPoints[1].push(points[i]);
         }
-        else if ((gradient(points[i], points[i-3])) <= 0.03 && (gradient(points[i], points[i-3])) >= -0.03 && vertical(points, i)) {
+        else if (Math.abs(gradient(points[i], points[i-3])) <= 0.03 && vertical(points, i)) {
             // sit points - right angle
             console.log("sit grad", i, gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
             movementPoints[2].push(points[i]);
             
         }
-        else if ((gradient(points[i], points[i-3])) <= 0.3 && (gradient(points[i], points[i-3])) >= 0 && (gradient(points[i+3], points[i])) >= -0.3 && (gradient(points[i+3], points[i])) < 0) {
+        else if (Math.abs(gradient(points[i], points[i-3])) <= 0.3 && Math.abs(gradient(points[i+3], points[i])) <= 0.3) {
             // wave points - arc
             movementPoints[3].push(points[i]);
         }
