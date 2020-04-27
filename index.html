@@ -38,7 +38,7 @@
 					draw, 
 					generateDrawing, 
 					stopDrawing,
-					controlParameter
+					controlMovement
 				} from './canvas.js';
 
 			var container, stats, clock, gui, mixer, actions, activeAction, previousAction;
@@ -160,8 +160,8 @@
 
 			function createGUI( model, animations ) {
 
-				var states = [ 'Idle', 'Walking', 'Running', 'Dance', 'Sitting', 'Standing' ];
-				var emotes = [ 'Jump', 'Yes', 'No', 'Wave', 'Punch', 'ThumbsUp', 'Death' ];
+				var states = [ 'Idle', 'Walking', 'Running', 'Dance', 'Standing' ];
+				var emotes = [ 'Jump', 'Yes', 'No', 'Wave', 'Punch', 'ThumbsUp', 'Death', 'Sitting' ];
 
 				gui = new GUI();
 
@@ -254,7 +254,8 @@
 				else {
 					// console.info("hellohellohello")
 					stopDrawing();
-					movements = controlParameter();
+					movements = controlMovement();
+					// [[], [], [], []]
 					console.info(movements);
 					// control
 					controls.enabled = true;
@@ -318,68 +319,96 @@
 
 
 			}
-			function similar(a, b) {
+			function similar1(a, b) {
 				if (a >= b - 1 && a < b - 0.93) {
+					return true;
+				}
+				else return false;
+			}
+			function similar2(a, b) {
+				if (a >= b + 0.43 && a < b + 0.5) {
 					return true;
 				}
 				else return false;
 			}
 			var counting = 0;
 			var addCount = false;
-			var currentMoveInd = 0;
+			var currentInd = [0, 0, 0, 0]; //[DeathInd, JumpInd,  , ]
 			function update(model) {
-				
-
-			if (currentMoveInd < movements.length && similar(model.position.z, movements[currentMoveInd].z)) {
-				addCount = true;
-				console.info("counting....", counting++)
-				
-				console.info(model.position.z, movements[currentMoveInd].z);
-				console.info(activeAction);
-				// console.info('Death', i);
-				fadeToAction('Death', 1);
-				// fadeToAction('Death', 1);
-				console.info(activeAction);
-				// while (addCount) {
-				// 	counting ++;
-				// 	if (counting >= 20000) addCount = false;
-				// }
-
-				
-				// model.position.y += 7;
-				// console.info(model.position.y, "00");
-
-				// isMoving = false;
-				// model.position.y -= 7;
-				// console.info(model.position.y, "01");
-				//jump
-				currentMoveInd ++;
-				
-			}
-			else if (counting >= 200) {
-				fadeToAction('Walking', 1);
-				console.info(activeAction);
-				counting = 0;
-				addCount = false;
-			}
-			else {
-				counting++;
-			}
+				//Death Situation
+				if (currentInd[0] < movements[0].length && similar1(model.position.z, movements[0][currentInd[0]].z) && !addCount) {
+					addCount = true;
+					console.info("counting....", counting++)
 					
-					// else  {
-					// 	isMoving = true;
-					// }
-				// }
-				// if (addCount) counting++;
-				// if (!addCount || (addCount && counting >= 200)) {
+					console.info(model.position.z, movements[0][currentInd[0]].z);
+					console.info(activeAction);
+					// console.info('Death', i);
+					fadeToAction('Death', 0.5);
+					// fadeToAction('Death', 1);
+					console.info(activeAction);
+					currentInd[0] ++;
 					
-				// 	addCount = false;
-				// 	counting = 0;
-				// } 
-			if (!addCount) model.position.z += 0.07;
-				// else model.position.z += 0.00001;
-				// model.rotation.y += 0.001;
-				// model.translateZ(0.05);
+				}
+				else if (currentInd[1] < movements[1].length && similar1(model.position.z, movements[1][currentInd[1]].z) && !addCount) {
+				// jump situation
+				
+					console.info(model.position.z, movements[1][currentInd[1]].z);
+					console.info(activeAction);
+					// console.info('Death', i);
+					fadeToAction('Jump', 0.1);
+					fadeToAction('Walking', 1);
+					console.info(activeAction);
+					currentInd[1] ++;
+					
+				}
+				// sit situation
+				else if (currentInd[2] < movements[2].length && similar2(model.position.z, movements[2][currentInd[2]].z)) {
+					addCount = true;
+					console.info("sit counting....", counting++)
+					
+					console.info(model.position.z, movements[2][currentInd[2]].z);
+	
+					// console.info('Death', i);
+					fadeToAction('Sitting', 0.1);
+					// fadeToAction('Death', 1);
+					console.info(activeAction);
+					currentInd[2] ++;
+					
+				}
+				
+				// wave situation
+				else if (currentInd[3] < movements[3].length && similar1(model.position.z, movements[3][currentInd[3]].z)) {
+					console.info("Waving!")
+					addCount = true;
+					console.info(model.position.z, movements[3][currentInd[3]].z);
+					console.info(activeAction);
+					// console.info('Death', i);
+					fadeToAction('Wave', 0.1);
+					// fadeToAction('Walking', 5);
+					console.info(activeAction);
+					currentInd[3] ++;
+					
+				}				
+				// Death on the ground part
+				else if (counting >= 150) {
+					console.info("return to walk!");
+					addCount = false;
+					fadeToAction('Walking', 0.1);
+					// console.info(activeAction);
+					counting = 0;
+					
+				}
+				else if (addCount) {
+					counting++;
+				}
+
+
+				// Death on the ground part
+	
+
+
+				if (!addCount) model.position.z += 0.07;
+
 			}
 
 

@@ -112,18 +112,66 @@ function gradient(point1, point2) {
 //     else if (number == 0) return 0;
 //     else return -1;
 // }
-
-export function controlParameter() {
-    var peakPoints = [];
-    for (let i = 5; i < points.length - 5; i += 5) {
-        // console.info(points[i]);
-        if ((gradient(points[i], points[i-5])) > 0.5 &&(gradient(points[i+5], points[i])) < -0.5) {
-            peakPoints.push(points[i]);
-            // console.info(peakPoints);
-        }
-
+function pos2vec2acc(points) {
+    let len = points.length;
+    var ans = [];
+    let vec = [], acc = [];
+    for (let idx = 1; idx < len - 1; idx ++) {
+        vec.push(gradient(points[idx + 1], points[idx - 1]));
     }
-    return peakPoints;
+    for (let idx = 0; idx < vec.length - 1; idx ++) {
+        acc.push(gradient(vec[idx + 1], vec[idx]));
+    }
+    ans.push(vec);
+    ans.push(acc);
+    return ans;
+     
+
+}
+function vertical(points, i) {
+    let sum = 0;
+    for (let idx = i; idx < i + 3; idx++) {
+        sum += points[idx].z;
+    }
+    let avg = sum / 3;
+    
+    let flag = true;
+    for (let idx = i; idx < i + 3; idx++) {
+        if (points[idx].z > avg + 0.03 || points[idx].z < avg - 0.03) flag = false;
+        if (!flag) break;
+    }
+    console.info("vertical?", i, flag, "avg:", avg);
+    return flag;
+}
+export function controlMovement() {
+    var movementPoints = [[], [], [], []];
+    pointPoperty = pos2vec2acc(points);
+    for (let i = 3; i < points.length - 3; i += 3) {
+        console.log("grad", gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
+        // console.info(points[i]);
+        if ((gradient(points[i], points[i-3])) > 1 && (gradient(points[i+3], points[i])) < -1) {
+            // death points
+            console.log("death grad", gradient(points[i], points[i-3]), gradient(points[i+5], points[i]));
+            movementPoints[0].push(points[i]);
+            
+        }
+        else if ((gradient(points[i], points[i-3])) <= 1 && (gradient(points[i], points[i-3])) > 0.3 && (gradient(points[i+3], points[i])) >= -1 && (gradient(points[i+3], points[i])) < -0.3) {
+            // jump points
+            console.log("jump grad", i, gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
+            movementPoints[1].push(points[i]);
+        }
+        else if ((gradient(points[i], points[i-3])) <= 0.03 && (gradient(points[i], points[i-3])) >= -0.03 && vertical(points, i)) {
+            // sit points - right angle
+            console.log("sit grad", i, gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
+            movementPoints[2].push(points[i]);
+            
+        }
+        else if ((gradient(points[i], points[i-3])) <= 0.3 && (gradient(points[i], points[i-3])) >= 0 && (gradient(points[i+3], points[i])) >= -0.3 && (gradient(points[i+3], points[i])) < 0) {
+            // wave points - arc
+            movementPoints[3].push(points[i]);
+        }
+    }
+    return movementPoints;
 
 
 }
