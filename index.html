@@ -33,9 +33,7 @@
 			import { GUI } from './js/dat.gui.module.js';
 			import { OrbitControls } from './js/OrbitControls.js';
 			import { GLTFLoader } from './js/GLTFLoader.js';
-			import {startDraw, 
-					endDraw, 
-					draw, 
+			import { 
 					generateDrawing, 
 					stopDrawing,
 					controlMovement
@@ -49,11 +47,17 @@
 
 				draw: true,
 				play: false,
+				reset: function() {},
+				'modify time scale': 1.0
 				
 				}
+			var counting = 0;
+			var addCount = false;
+			var currentInd = [0, 0, 0, 0]; //[DeathInd, JumpInd,  , ]
+			var jumpPosY = [0, 0.003, 0.012, 0.017, 0.01766, 0.01773, 0.01594, 0.011, 0.005, 0.0015, 0]
 			var api = { state: 'Walking' };
-			var frameNumber = 0;
-			var mouse = new THREE.Vector2();
+			// var frameNumber = 0;
+			// var mouse = new THREE.Vector2();
 			init();
 			animate();
 
@@ -106,7 +110,7 @@
 
 					model = gltf.scene;
 					model.position.z -= 10;
-					console.log(model.position);
+					console.log(model);
 					model.traverse( (child) => {
 						
 						if (child.isBone) {
@@ -199,44 +203,26 @@
 
 				statesFolder.open();
 
-				// // emotes
 
-				// var emoteFolder = gui.addFolder( 'Emotes' );
-
-				// function createEmoteCallback( name ) {
-
-				// 	api[ name ] = function () {
-
-				// 		fadeToAction( name, 0.2 );
-
-				// 		mixer.addEventListener( 'finished', restoreState );
-
-				// 	};
-
-				// 	emoteFolder.add( api, name );
-
-				// }
-
-				// function restoreState() {
-
-				// 	mixer.removeEventListener( 'finished', restoreState );
-
-				// 	fadeToAction( api.state, 0.2 );
-
-				// }
-
-				// for ( var i = 0; i < emotes.length; i ++ ) {
-
-				// 	createEmoteCallback( emotes[ i ] );
-
-				// }
-
-				// emoteFolder.open();
 				// Controls
 				var controlFolder = gui.addFolder( 'Control');
 				controlFolder.add( params, 'draw').onChange( function () { isDraw(params)});
 				controlFolder.add( params, 'play');
+				// reset TO-DO
+				// params.reset = function() {
+				// 	model.position.z = -10;
+				// 	counting = 0;
+				// 	addCount = false;
+				// 	currentInd = [0, 0, 0, 0]; //[DeathInd, JumpInd,  , ]
+				// 	params.play = false;
+				// 	fadeToAction(Walking, 0.5)
+				// }
+				// controlFolder.add( params, 'reset');
 				controlFolder.open();
+				// Speed
+				// var speedFolder = gui.addFolder('General Speed');
+				// speedFolder.add(params, 'modify time scale', 0.0, 1.5, 0.01 ).onChange( modifyTimeScale );
+
 
 
 				activeAction = actions[ 'Walking' ];
@@ -254,9 +240,9 @@
 				else {
 					// console.info("hellohellohello")
 					stopDrawing();
-					movements = controlMovement();
+					movements = controlMovement(scene, camera);
 					// [[], [], [], []]
-					console.info(movements);
+					console.info("movements", movements);
 					// control
 					controls.enabled = true;
 					
@@ -265,6 +251,11 @@
 
 			}
 
+			function modifyTimeScale( speed ) {
+
+				mixer.timeScale = speed;
+
+			}
 			function fadeToAction( name, duration ) {
 
 				previousAction = activeAction;
@@ -331,17 +322,23 @@
 				}
 				else return false;
 			}
-			var counting = 0;
-			var addCount = false;
-			var currentInd = [0, 0, 0, 0]; //[DeathInd, JumpInd,  , ]
+			function similar3(a, b) {
+				if (a >= b - 2 && a < b - 1.93) {
+					return true;
+				}
+				else return false;
+			}
+			var currentJump = false;
+			var deltaJump = 0.1;
 			function update(model) {
+				
 				//Death Situation
 				if (currentInd[0] < movements[0].length && similar1(model.position.z, movements[0][currentInd[0]].z) && !addCount) {
 					addCount = true;
-					console.info("counting....", counting++)
+					// console.info("counting....", counting++)
 					
-					console.info(model.position.z, movements[0][currentInd[0]].z);
-					console.info(activeAction);
+					// console.info(model.position.z, movements[0][currentInd[0]].z);
+					// console.info(activeAction);
 					// console.info('Death', i);
 					fadeToAction('Death', 0.5);
 					// fadeToAction('Death', 1);
@@ -349,48 +346,55 @@
 					currentInd[0] ++;
 					
 				}
-				else if (currentInd[1] < movements[1].length && similar1(model.position.z, movements[1][currentInd[1]].z) && !addCount) {
 				// jump situation
+				else if (currentInd[1] < movements[1].length && similar3(model.position.z, movements[1][currentInd[1]].z) && !addCount) {
 				
-					console.info(model.position.z, movements[1][currentInd[1]].z);
-					console.info(activeAction);
+					addCount = true;
+					currentJump = true;
+					// console.info(model.position.z, movements[1][currentInd[1]].z);
+					// console.info(activeAction);
 					// console.info('Death', i);
-					fadeToAction('Jump', 0.1);
-					fadeToAction('Walking', 1);
-					console.info(activeAction);
+					fadeToAction('Jump', 0.01);
+					deltaJump = (movements[1][currentInd[1]].y) / 20;
+					// console.info("deltaJump", deltaJump);
+					// model.position.y += 1;
+					// fadeToAction('Walking', 1);
+					// model.position.y -= 1;
+					// console.info(activeAction);
 					currentInd[1] ++;
 					
 				}
 				// sit situation
 				else if (currentInd[2] < movements[2].length && similar2(model.position.z, movements[2][currentInd[2]].z)) {
 					addCount = true;
-					console.info("sit counting....", counting++)
+					// console.info("sit counting....", counting++)
 					
-					console.info(model.position.z, movements[2][currentInd[2]].z);
+					// console.info(model.position.z, movements[2][currentInd[2]].z);
 	
 					// console.info('Death', i);
 					fadeToAction('Sitting', 0.1);
 					// fadeToAction('Death', 1);
-					console.info(activeAction);
+					// console.info(activeAction);
 					currentInd[2] ++;
 					
 				}
 				
-				// wave situation
-				else if (currentInd[3] < movements[3].length && similar1(model.position.z, movements[3][currentInd[3]].z)) {
-					console.info("Waving!")
+				// Dance situation
+				else if (currentInd[3] < movements[3].length && similar2(model.position.z, movements[3][currentInd[3]].z)) {
+					// console.info("Dancing!")
 					addCount = true;
-					console.info(model.position.z, movements[3][currentInd[3]].z);
-					console.info(activeAction);
+					// console.info(model.position.z, movements[3][currentInd[3]].z);
+					// console.info(activeAction);
 					// console.info('Death', i);
 					fadeToAction('Dance', 0.1);
 					// fadeToAction('Walking', 5);
-					console.info(activeAction);
+					// console.info(activeAction);
 					currentInd[3] ++;
 					
 				}				
 				// Death on the ground part
 				else if (counting >= 150) {
+					if (currentJump) currentJump = false;
 					console.info("return to walk!");
 					addCount = false;
 					fadeToAction('Walking', 0.1);
@@ -400,6 +404,32 @@
 				}
 				else if (addCount) {
 					counting++;
+					if (currentJump) {
+						// if (counting > 15 && counting < 20) {
+							
+						// } 
+						// else if (counting >= 20) {
+						// 	counting = 150;
+						// }
+						if (counting >= 25) {
+							model.position.y = 0;
+							counting = 150;
+						}
+						// else if (counting == 10) {
+						// 	model.position.y = 0;
+						// 	console.info("hello 10")
+						// }
+						else if (counting >= 5) {
+							// model.position.y = jumpPosY[counting - 5] * 100;
+							model.position.y += deltaJump;
+							model.position.z += 0.2;
+
+						}
+						
+						// console.info("jump position", model.position.y)
+						
+					} 
+					
 				}
 
 

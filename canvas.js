@@ -24,6 +24,7 @@ var material, geometry;
 var scene, camera;
 var lastPoint = null;
 
+// project the 2D mouse track into 3D space 
 function get3dPointZAxis(event){
     var vec = new THREE.Vector3(
                 ( event.clientX / window.innerWidth ) * 2 - 1,
@@ -45,7 +46,8 @@ function get3dPointZAxis(event){
 
 }
 
-export function startDraw(e) {
+// Record Drawing 
+function startDraw(e) {
     press_down = true;
     console.info("start...")
     lastPoint = get3dPointZAxis(e);
@@ -54,7 +56,7 @@ export function startDraw(e) {
     
 }
 
-export function endDraw() {
+function endDraw() {
     console.info("endDraw");
     press_down = false;
     lastPoint = null;
@@ -62,8 +64,7 @@ export function endDraw() {
     // ctx.beginPath();
 } 
 
-
-export function draw(e) {
+function draw(e) {
 
     if (!press_down) return;
     console.info("start?...")
@@ -82,17 +83,14 @@ export function draw(e) {
 
     
 }
-//create a blue LineBasicMaterial
+//create a blue drawing line
 export function generateDrawing(s, c) {
     scene = s;
     camera = c;
     material = new THREE.LineBasicMaterial( { color: 0x0000ff } );  
-    // console.info("hi");
-    // console.info(geometry);
     document.addEventListener( 'mousemove', draw);
     document.addEventListener( 'mousedown', startDraw);
-    document.addEventListener( 'mouseup', endDraw);
-                  
+    document.addEventListener( 'mouseup', endDraw);                 
 
 }
 
@@ -107,23 +105,59 @@ function gradient(point1, point2) {
     return ((point1.y - point2.y)/(point1.z - point2.z));
 }
 
-// function plusOrMinus(number) {
-//     if (number > 0) return 1;
-//     else if (number == 0) return 0;
-//     else return -1;
-// }
+
+function tangent(k1, k2) {
+    return (k2-k1) / (1+ k1* k2);
+
+}
+
+// transform position to velocity & corner detection
 function pos2vec2acc(points) {
     let len = points.length;
     var ans = [];
-    let vec = [], acc = [];
+    let vec = [], acc = [], breakingPointsIdx = [];
     for (let idx = 1; idx < len - 1; idx ++) {
         vec.push(gradient(points[idx + 1], points[idx - 1]));
     }
-    for (let idx = 0; idx < vec.length - 1; idx ++) {
-        acc.push(gradient(vec[idx + 1], vec[idx]));
+    // let positive = false;
+    // if (vec[0] > 0)  positive = true;
+    let count = 0;
+    for (let idx = 5; idx < vec.length - 5; idx ++) {
+        // corner detection
+        if (breakingPointsIdx.length > 0) {
+            let preIdx = breakingPointsIdx[breakingPointsIdx.length -1];
+            if (vec[preIdx] * vec[idx] == -1 && (idx - count >= 10)) {
+                // perpendicuar
+                count = idx;
+                breakingPointsIdx.push(idx); 
+            }
+            else {
+                let tanTheta = tangent(vec[preIdx], vec[idx]);       
+                if ((tanTheta < 0 || tanTheta > 0.5) && (idx - count >= 10)) {
+                    console.info("tanTheta", tanTheta);
+                    count = idx;
+                    breakingPointsIdx.push(idx);
+                }       
+            }            
+        }
+        else {
+            if ( vec[0] >= -0.01 && vec[idx] <= -0.1 && (idx - count >= 5) ) {
+                console.log(idx, vec[idx]);
+                breakingPointsIdx.push(idx);   
+                count = idx;
+                // positive = false;          
+            }
+            else if (vec[0] <= 0.01 && vec[idx] > 0.1 && (idx - count >= 5)) {
+                console.log(idx, vec[idx]);
+                breakingPointsIdx.push(idx); 
+                count = idx; 
+                // positive = true;   
+            }            
+        }
+
     }
     ans.push(vec);
-    ans.push(acc);
+    ans.push(breakingPointsIdx);
     return ans;
      
 
@@ -144,46 +178,139 @@ function vertical(points, i) {
     console.info("vertical?", i, flag, "avg:", avg);
     return flag;
 }
-export function controlMovement() {
-    var movementPoints = [[], [], [], []];
-    var pointPoperty = pos2vec2acc(points);
-    for (let i = 3; i < points.length - 3; i += 3) {
-        console.log("grad", i, gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
-        // console.info(points[i]);
-        if ((gradient(points[i], points[i-3])) > 1 && (gradient(points[i+3], points[i])) < -1) {
-            // death points
-            console.log("death grad", gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
-            movementPoints[0].push(points[i]);
-            
-        }
-        else if ((gradient(points[i], points[i-3])) <= 1 && (gradient(points[i], points[i-3])) > 0.3 && (gradient(points[i+3], points[i])) >= -1 && (gradient(points[i+3], points[i])) < -0.3) {
-            // jump points
-            console.log("jump grad", i, gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
-            movementPoints[1].push(points[i]);
-        }
-        else if (Math.abs(gradient(points[i], points[i-3])) <= 0.03 && vertical(points, i)) {
-            // sit points - right angle
-            console.log("sit grad", i, gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
-            movementPoints[2].push(points[i]);
-            
-        }
-        else if (Math.abs(gradient(points[i], points[i-3])) <= 0.3 && Math.abs(gradient(points[i+3], points[i])) <= 0.3) {
-            // wave points - arc
-            movementPoints[3].push(points[i]);
-        }
+
+function decideSlope(idx1, idx2) {
+    let slope = 0;
+    let meanY = 0, meanZ = 0;
+    console.info(idx1, idx2-1, points[idx1], points[idx2-1]);
+    idx2 --;
+    // let maxY = [points[idx1].y, idx1], maxZ = [points[idx1].z, idx1], minY = [points[idx1].y, idx1], minZ = [points[idx1].z, idx1];
+    for (let i = idx1; i < idx2; i++) {
+        meanY += points[i].y;
+        meanZ += points[i].z;
+
     }
+    meanY /= (idx2 - idx1);
+    meanZ /= (idx2 - idx1);
+    // console.info("meanY&Z", meanY, meanZ);
+    let numerator = 0, denominator = 0; 
+    for (let i = idx1; i < idx2; i++) {
+        numerator += ((points[i].z - meanZ) * (points[i].y - meanY));
+        denominator += ((points[i].z - meanZ) * (points[i].z - meanZ))
+    }
+    slope = numerator / denominator;
+    let b = meanY - slope * meanZ;
+
+    var geometry_ref = new THREE.Geometry();
+    let z1 = points[idx1].z, z2 = points[idx2-1].z;
+    geometry_ref.vertices.push(new THREE.Vector3(0, slope * z1 + b, z1));
+    geometry_ref.vertices.push(new THREE.Vector3(0, slope * z2 + b, z2));
+    // console.info("slope&intercept", slope, b);
+    material = new THREE.LineBasicMaterial( { color: 0xff0000 } ); 
+    var line_ref = new THREE.Line( geometry_ref, material);
+    scene.add(line_ref);
+    return slope;
+}
+
+
+
+export function controlMovement(s, c) {
+    scene = s;
+    camera = c;
+    var movementPoints = [[], [], [], []]; // death, jump, sit, dance
+    var pointPoperty = pos2vec2acc(points);
+    var gradients = [];
+    console.info("vec & turning point", pointPoperty);
+    for (let i = 0; i < pointPoperty[1].length; i ++ ) {
+        let breakingPointIdx = pointPoperty[1][i];
+        let j = 0;
+        if (i != 0) {
+            j = pointPoperty[1][i-1];
+        }
+        gradients.push(decideSlope(j, breakingPointIdx));    
+
+
+    }
+    if (pointPoperty[1].length >= 1) gradients.push(decideSlope(pointPoperty[1][pointPoperty[1].length-1], points.length-2));
+    else {
+        gradients.push(decideSlope(0, points.length-1));
+        pointPoperty[1].push(points.length / 2);
+    } 
+    // iterate through gradients
+    for (let j = 0; j < gradients.length; j++) {
+        if (j == gradients.length - 1) {
+            if (Math.abs(gradients[j]) < 0.03) {
+                // dance
+                console.info("j", j);
+                console.info(points[pointPoperty[1][j-1]]);
+                movementPoints[3].push(points[pointPoperty[1][j-1]]);
+            }        
+        }
+        else {
+            if (gradients[j] >= 1 && gradients[j + 1] <= -1) {
+                // death
+                movementPoints[0].push(points[pointPoperty[1][j]]);
+            }
+            else if (gradients[j] < 1 && gradients[j] > 0.03 && 
+                    gradients[j + 1] < 0 && gradients[j + 1] > -1) {
+                // jump
+                movementPoints[1].push(points[pointPoperty[1][j]]);
+            }
+            else if (Math.abs(gradients[j]) < 0.03 && Math.abs(gradients[j + 1]) > 3.9) {
+                // sit
+                movementPoints[2].push(points[pointPoperty[1][j]]);
+            }
+            else if (Math.abs(gradients[j]) < 0.05) {
+                // dance
+                console.info("j", j);
+                console.info(points[pointPoperty[1][j]]);
+                movementPoints[3].push(points[pointPoperty[1][j]]);
+            }            
+        }
+
+    }
+    
+    console.log(scene);
+    console.info("gradients", gradients);
     return movementPoints;
 
 
 }
-//EventListeners
-// canvas.addEventListener("mousedown", startPosition);
-// canvas.addEventListener("mouseup", endPosition);
-// canvas.addEventListener("mousemove", draw);
 
 
+// export function controlMovement() {
+//     var movementPoints = [[], [], [], []];
+//     var pointPoperty = pos2vec2acc(points);
+//     console.info("vec & turning point", pointPoperty);
+//     for (let i = 3; i < points.length - 3; i += 3) {
+//         // console.log("grad", i, gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
+//         // console.info(points[i]);
+//         if ((gradient(points[i], points[i-3])) > 1.5 && (gradient(points[i+3], points[i])) < -1.5) {
+//             // death points
+//             console.log("death grad", gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
+//             movementPoints[0].push(points[i]);
+            
+//         }
+//         else if ((gradient(points[i], points[i-3])) <= 1.5 && (gradient(points[i], points[i-3])) > 0.3 && (gradient(points[i+3], points[i])) >= -1.5 && (gradient(points[i+3], points[i])) < -0.3) {
+//             // jump points
+//             console.log("jump grad", i, gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
+//             movementPoints[1].push(points[i]);
+//         }
+//         else if (Math.abs(gradient(points[i], points[i-3])) <= 0.03 && vertical(points, i)) {
+//             // sit points - right angle
+//             console.log("sit grad", i, gradient(points[i], points[i-3]), gradient(points[i+3], points[i]));
+//             movementPoints[2].push(points[i]);
+            
+//         }
+//         else if (Math.abs(gradient(points[i], points[i-3])) <= 0.3 && Math.abs(gradient(points[i+3], points[i])) <= 0.3) {
+//             // wave points - arc
+//             movementPoints[3].push(points[i]);
+//         }
+//     }
+//     return movementPoints;
 
 
-// window.addEventListener("resize", render);
+// }
+
 
 
