@@ -20,8 +20,6 @@ function get3dPointXAxis(event){
     vec.sub( camera.position ).normalize();    
     var distance = - camera.position.x / vec.x;    
     pos.copy( camera.position ).add( vec.multiplyScalar( distance ) );
-    console.info("pos:");
-    console.info(pos);
     return pos;
     // return vector;
  
@@ -31,27 +29,20 @@ function get3dPointXAxis(event){
 // Record Drawing 
 function startDraw(e) {
     press_down = true;
-    console.info("start...")
     lastPoint = get3dPointXAxis(e);
-    console.info(lastPoint);
     points.push(lastPoint);
     
 }
 
 function endDraw() {
-    console.info("endDraw");
     press_down = false;
     lastPoint = null;
-    console.info(points);
-    // ctx.beginPath();
 } 
 
 function draw(e) {
 
     if (!press_down) return;
-    console.info("start?...")
     if (lastPoint) {
-        console.info("drawing...")
         var newPoint = get3dPointXAxis(e);
         var geometry = new THREE.Geometry();
         geometry.vertices.push(lastPoint);
@@ -133,7 +124,6 @@ function pos2vec2acc(points) {
         else {
             let tanTheta = tangent(vec[preIdx], vec[idx]);       
             if ((tanTheta < -0.5 || tanTheta > 0.5) && (idx - count >= 10)) {
-                console.info("tanTheta", tanTheta);
                 count = idx;
                 breakingPointsIdx.push(idx);
             }       
@@ -150,17 +140,14 @@ function pos2vec2acc(points) {
 function decideSlope(idx1, idx2) {
     let slope = 0;
     let meanY = 0, meanZ = 0;
-    console.info(idx1, idx2-1, points[idx1], points[idx2-1]);
     idx2 --;
-    // let maxY = [points[idx1].y, idx1], maxZ = [points[idx1].z, idx1], minY = [points[idx1].y, idx1], minZ = [points[idx1].z, idx1];
-    for (let i = idx1; i < idx2; i++) {
+     for (let i = idx1; i < idx2; i++) {
         meanY += points[i].y;
         meanZ += points[i].z;
 
     }
     meanY /= (idx2 - idx1);
     meanZ /= (idx2 - idx1);
-    // console.info("meanY&Z", meanY, meanZ);
     let numerator = 0, denominator = 0; 
     for (let i = idx1; i < idx2; i++) {
         numerator += ((points[i].z - meanZ) * (points[i].y - meanY));
@@ -173,7 +160,6 @@ function decideSlope(idx1, idx2) {
     let z1 = points[idx1].z, z2 = points[idx2-1].z;
     geometry_ref.vertices.push(new THREE.Vector3(0, slope * z1 + b, z1));
     geometry_ref.vertices.push(new THREE.Vector3(0, slope * z2 + b, z2));
-    // console.info("slope&intercept", slope, b);
     material = new THREE.LineBasicMaterial( { color: 0xff0000 } ); 
     var line_ref = new THREE.Line( geometry_ref, material);
     scene.add(line_ref);
@@ -188,7 +174,6 @@ export function controlMovement(s, c) {
     var movementPoints = [[], [], [], []]; // death, jump, sit, dance
     var pointPoperty = pos2vec2acc(points);
     var gradients = [];
-    console.info("vec & turning point", pointPoperty);
     for (let i = 0; i < pointPoperty[1].length; i ++ ) {
         let breakingPointIdx = pointPoperty[1][i];
         let j = 0;
@@ -209,8 +194,6 @@ export function controlMovement(s, c) {
         if (j == gradients.length - 1) {
             if (Math.abs(gradients[j]) < 0.11) {
                 // dance
-                console.info("j", j);
-                console.info(points[pointPoperty[1][j]]);
                 if (j == 0) movementPoints[3].push(points[0]);
                 else movementPoints[3].push(points[pointPoperty[1][j-1]]);
             }        
@@ -231,16 +214,12 @@ export function controlMovement(s, c) {
             }
             else if (Math.abs(gradients[j]) < 0.11) {
                 // dance
-                console.info("j", j);
-                console.info(points[pointPoperty[1][j]]);
                 movementPoints[3].push(points[pointPoperty[1][j]]);
             }            
         }
 
     }
     
-    console.log(scene);
-    console.info("gradients", gradients);
     return movementPoints;
 
 
